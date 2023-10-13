@@ -1,10 +1,11 @@
 from mitmproxy import http
 import re
+import os
 
 class Blocker:
 
     def __init__(self):
-        self.fp = 'blocklist.txt'
+        self.fp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blocklist.txt')
         self.redirect_url = 'https://www.google.com/search?q=inspiring+quotes+for+entrepreneurs&tbm=isch'
 
         assert self.fp, 'Blocklist file not found'
