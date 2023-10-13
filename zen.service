@@ -1,0 +1,8 @@
+[Unit]
+Description=Zen Script
+
+[Service]
+ExecStart=/home/espacio/projects/zen/startup.sh
+
+[Install]
+WantedBy=multi-user.target
