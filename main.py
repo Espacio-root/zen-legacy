@@ -1,6 +1,6 @@
 from mitmproxy import http
-import re
 import os
+import re
 
 class Blocker:
 
@@ -13,10 +13,10 @@ class Blocker:
 
     def _process_blocklist(self):
         with open(self.fp, 'r') as f:
-            self.redirects = [f'www.{line.strip()}' for line in f.readlines()]
+            self.redirects = [line.strip() for line in f.readlines()]
     
     def request(self, flow: http.HTTPFlow):
-        if flow.request.host in self.redirects:
+        if re.match(r'^(www\.)?' + '(' + '|'.join(self.redirects) + ')', flow.request.host, re.MULTILINE):
             flow.request.url = self.redirect_url
 
 addons = [
