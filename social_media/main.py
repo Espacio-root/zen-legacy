@@ -6,10 +6,11 @@ import os
 
 @dataclass
 class Config:
-    xpath_mapping: dict
+    match_mapping: dict
     method: tuple
     url: str
     replace_url: str
+    debug: bool = False
     
     def __post_init__(self):
         valid_methods = ('literal', 'regex')
@@ -27,30 +28,26 @@ class BlockerConfig:
 
     def __init__(self, config):
         self.c = config
-        self.xpaths = self.c.xpath_mapping.keys()
-        self.filepaths = self.c.xpath_mapping.values()
+        self.matches = list(self.c.match_mapping.keys())
+        self.filepaths = self.c.match_mapping.values()
         assert any([os.path.exists(fp) for fp in self.filepaths]), 'Blocklist file not found'
 
-    def _get_xpath(self, flow):
-        res = []
-        with open('test.html', 'w') as fp:
-            fp.write(flow.response.content.decode('utf-8'))
-        content = html.fromstring(flow.response.content)
-        for xpath in self.xpaths:
-            x = content.xpath(xpath)
-            print(x)
-            if x:
-                res.append(x[0])
-        return res
+    def _get_matches(self):
+        return [match.replace('{word}', word) for match, block in zip(self.matches, self._get_blocklist()) for word in block]
 
     def _get_blocklist(self):
         return [[line.strip() for line in open(fp, 'r').readlines()] for fp in self.filepaths]
 
     def block_literal(self, flow):
-        return any([word in xpath for block, xpath in zip(self._get_xpath(flow), self._get_blocklist()) for word in block])
+        content = flow.response.content.decode('utf-8')
+        if self.c.debug:
+            with open('test.html', 'w') as fp:
+                fp.write(content)
+        return any([match in content for match in self._get_matches()])
 
     def block_regex(self, flow):
-        return any([re.match(regex, xpath) for block, xpath in zip(self._get_xpath(flow), self._get_blocklist()) for regex in block])
+        content = flow.response.content.decode('utf-8')
+        return any([re.match(regex, content) for regex in self._get_matches()])
 
     def replace_url(self, flow):
         flow.request.url = self.c.replace_url
@@ -76,4 +73,5 @@ class Blocker(BlockerConfig):
         to_block = getattr(self, f'block_{self.method[0]}')(flow)
         if to_block:
             flow = getattr(self, self.method[1])(flow)
+        return flow
 
